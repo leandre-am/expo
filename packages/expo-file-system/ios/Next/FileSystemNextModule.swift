@@ -20,6 +20,9 @@ public final class FileSystemNextModule: Module {
         guard let fileURL = urlOrNil else {
           return promise.reject(UnableToDownloadException("no file url"))
         }
+        guard let fileURL = urlOrNil else {
+          return
+        }
 
         do {
           if let to = to as? FileSystemDirectory {
