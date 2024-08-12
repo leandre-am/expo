@@ -130,6 +130,10 @@ class FileSystemNextModule : Module() {
       Property("path") { directory ->
         directory.asString()
       }
+
+      Function("listAsRecords") { directory: FileSystemDirectory ->
+        directory.listAsRecords()
+      }
     }
   }
 }

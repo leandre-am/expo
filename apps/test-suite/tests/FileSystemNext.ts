@@ -282,5 +282,16 @@ export async function test({ describe, expect, it, ...t }) {
         expect(output.path).toBe(file.path);
       });
     });
+
+    describe('Lists directory contents', () => {
+      it('for newly created directories', () => {
+        new File(testDirectory + 'file.txt').create();
+        new Directory(testDirectory + 'directory').create();
+        expect(new Directory(testDirectory).list()).toEqual([
+          new File(testDirectory + 'file.txt'),
+          new Directory(testDirectory + 'directory'),
+        ]);
+      });
+    });
   });
 }
