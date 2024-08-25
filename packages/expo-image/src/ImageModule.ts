@@ -6,7 +6,7 @@ import { type ImageRef, type ImageSource } from './Image.types';
 declare class ImageModule extends NativeModule {
   Image: typeof ImageRef;
 
-  loadAsync(source: ImageSource): Promise<ImageRef>;
+  loadAsync(source: ImageSource | string): Promise<ImageRef>;
 }
 
 export default requireNativeModule<ImageModule>('ExpoImage');
