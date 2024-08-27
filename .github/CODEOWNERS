@@ -64,6 +64,7 @@
 /packages/expo-intent-launcher                  @kudo @alanjhughes
 /packages/expo-keep-awake                       @brentvatne @kudo
 /packages/expo-linear-gradient                  @alanjhughes
+/packages/expo-live-photo                       @behenate
 /packages/expo-local-authentication             @behenate
 /packages/expo-localization                     @EvanBacon @aleqsio
 /packages/expo-location                         @behenate @lukmccall
