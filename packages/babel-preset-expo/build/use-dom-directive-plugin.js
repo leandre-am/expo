@@ -47,6 +47,14 @@ function expoUseDomDirectivePlugin(api) {
                 // Collect all of the exports
                 path.traverse({
                     ExportNamedDeclaration(path) {
+                        const declaration = path.node.declaration;
+                        if (core_1.types.isInterfaceDeclaration(declaration) ||
+                            core_1.types.isTypeAlias(declaration) ||
+                            core_1.types.isTSInterfaceDeclaration(declaration) ||
+                            core_1.types.isTSTypeAliasDeclaration(declaration)) {
+                            // Skip export type and export interface
+                            return;
+                        }
                         throw path.buildCodeFrameError('Modules with the "use dom" directive only support a single default export.');
                     },
                     ExportDefaultDeclaration() {
