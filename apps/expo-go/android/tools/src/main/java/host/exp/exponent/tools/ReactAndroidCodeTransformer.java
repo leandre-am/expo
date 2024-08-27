@@ -55,7 +55,15 @@ public class ReactAndroidCodeTransformer {
     };
   }
 
-  private static final Map<String, MethodVisitor> FILES_TO_MODIFY = new HashMap<>();
+  private static abstract class KtMethodVisitor {
+    abstract KtNamedFunction visit(final String methodName, final KtNamedFunction n);
+    String modifySource(final String source) {
+      return source;
+    };
+  }
+
+  private static final Map<String, MethodVisitor> JAVA_FILES_TO_MODIFY = new HashMap<>();
+  private static final Map<String, KtMethodVisitor> KOTLIN_FILES_TO_MODIFY = new HashMap<>();
 
   private static String getCallMethodReflectionBlock(String className, String methodNameAndTypes, String targetAndValues) {
     return getCallMethodReflectionBlock(className, methodNameAndTypes, targetAndValues, "", "");
@@ -123,7 +131,7 @@ public class ReactAndroidCodeTransformer {
   }
 
   static {
-    FILES_TO_MODIFY.put("devsupport/DevServerHelper.java", new MethodVisitor() {
+    JAVA_FILES_TO_MODIFY.put("devsupport/DevServerHelper.java", new MethodVisitor() {
 
       @Override
       public Node visit(String methodName, MethodDeclaration n) {
@@ -150,7 +158,7 @@ public class ReactAndroidCodeTransformer {
         return n;
       }
     });
-    FILES_TO_MODIFY.put("modules/network/OkHttpClientProvider.java", new MethodVisitor() {
+    JAVA_FILES_TO_MODIFY.put("modules/network/OkHttpClientProvider.java", new MethodVisitor() {
 
       @Override
       public Node visit(String methodName, MethodDeclaration n) {
@@ -169,7 +177,7 @@ public class ReactAndroidCodeTransformer {
         return n;
       }
     });
-    FILES_TO_MODIFY.put("devsupport/DevSupportManagerBase.java", new MethodVisitor() {
+    JAVA_FILES_TO_MODIFY.put("devsupport/DevSupportManagerBase.java", new MethodVisitor() {
 
       @Override
       public Node visit(String methodName, MethodDeclaration n) {
@@ -193,9 +201,9 @@ public class ReactAndroidCodeTransformer {
         return n;
       }
     });
-    FILES_TO_MODIFY.put("devsupport/BridgeDevSupportManager.java", null);
+    JAVA_FILES_TO_MODIFY.put("devsupport/BridgeDevSupportManager.java", null);
 
-    FILES_TO_MODIFY.put("modules/core/ExceptionsManagerModule.java", new MethodVisitor() {
+    JAVA_FILES_TO_MODIFY.put("modules/core/ExceptionsManagerModule.java", new MethodVisitor() {
 
       @Override
       public Node visit(String methodName, MethodDeclaration n) {
@@ -212,7 +220,7 @@ public class ReactAndroidCodeTransformer {
         return n;
       }
     });
-    FILES_TO_MODIFY.put("modules/dialog/DialogModule.java", new MethodVisitor() {
+    JAVA_FILES_TO_MODIFY.put("modules/dialog/DialogModule.java", new MethodVisitor() {
 
       @Override
       public Node visit(String methodName, MethodDeclaration n) {
@@ -224,9 +232,9 @@ public class ReactAndroidCodeTransformer {
         return n;
       }
     });
-    FILES_TO_MODIFY.put("modules/network/NetworkingModule.java", null);
-    FILES_TO_MODIFY.put("modules/systeminfo/AndroidInfoHelpers.java", null);
-    FILES_TO_MODIFY.put("uimanager/NativeViewHierarchyManager.java", new MethodVisitor() {
+    JAVA_FILES_TO_MODIFY.put("modules/network/NetworkingModule.java", null);
+    JAVA_FILES_TO_MODIFY.put("modules/systeminfo/AndroidInfoHelpers.java", null);
+    JAVA_FILES_TO_MODIFY.put("uimanager/NativeViewHierarchyManager.java", new MethodVisitor() {
 
       @Override
       public Node visit(String methodName, MethodDeclaration n) {
@@ -238,7 +246,7 @@ public class ReactAndroidCodeTransformer {
         return n;
       }
     });
-    FILES_TO_MODIFY.put("bridge/DefaultJSExceptionHandler.java", new MethodVisitor() {
+    JAVA_FILES_TO_MODIFY.put("bridge/DefaultJSExceptionHandler.java", new MethodVisitor() {
 
       @Override
       public Node visit(String methodName, MethodDeclaration n) {
@@ -251,10 +259,10 @@ public class ReactAndroidCodeTransformer {
         return n;
       }
     });
-    FILES_TO_MODIFY.put("devsupport/DevInternalSettings.java", new MethodVisitor() {
+    KOTLIN_FILES_TO_MODIFY.put("devsupport/DevInternalSettings.kt", new KtMethodVisitor() {
 
       @Override
-      public Node visit(String methodName, MethodDeclaration n) {
+      public KtNamedFunction visit(String methodName, KtNamedFunction n) {
         switch (methodName) {
           case "isReloadOnJSChangeEnabled":
             BlockStmt blockStmt = JavaParser.parseBlock("{return false;}");
@@ -290,33 +298,33 @@ public class ReactAndroidCodeTransformer {
         source = source.replace("\nclass DevInternalSettings", "\npublic class DevInternalSettings");
 
         return addBeforeEndOfClass(source, """
-          public int exponentActivityId = -1;
+          private var exponentActivityId: Int = -1
 
-          public void setExponentActivityId(int value) {
-              exponentActivityId = value;
+          public fun setExponentActivityId(value: Int) {
+             exponentActivityId = value
           }
 
-          public int getExponentActivityId(){
-              return exponentActivityId;
+          public override fun getExponentActivityId(): Int {
+            return exponentActivityId
           }
         """);
       }
     });
 
-    FILES_TO_MODIFY.put("modules/debug/interfaces/DeveloperSettings.java", new MethodVisitor() {
+    KOTLIN_FILES_TO_MODIFY.put("modules/debug/interfaces/DeveloperSettings.kt", new KtMethodVisitor() {
 
       @Override
-      public Node visit(String methodName, MethodDeclaration n) {
+      public KtNamedFunction visit(String methodName, KtNamedFunction n) {
         return n;
       }
 
       @Override
       String modifySource(String source) {
-        return addBeforeEndOfClass(source, "int getExponentActivityId();");
+        return addBeforeEndOfClass(source, "public fun getExponentActivityId(): Int");
       }
     });
 
-    FILES_TO_MODIFY.put("BaseReactPackage.java", new MethodVisitor() {
+    JAVA_FILES_TO_MODIFY.put("BaseReactPackage.java", new MethodVisitor() {
 
         @Override
       public Node visit(String methodName, MethodDeclaration n) {
@@ -366,9 +374,17 @@ public class ReactAndroidCodeTransformer {
 
     // Actually modify the files
     String path = projectRoot + REACT_ANDROID_DEST_ROOT + '/' + SOURCE_PATH;
-    for (String fileName : FILES_TO_MODIFY.keySet()) {
+    for (String fileName : JAVA_FILES_TO_MODIFY.keySet()) {
       try {
-        updateFile(path + fileName, FILES_TO_MODIFY.get(fileName));
+        updateFile(path + fileName, JAVA_FILES_TO_MODIFY.get(fileName));
+      } catch (ParseException e) {
+        e.printStackTrace();
+      }
+    }
+
+    for (String fileName : KOTLIN_FILES_TO_MODIFY.keySet()) {
+      try {
+        updateKotlinFile(path + fileName, KOTLIN_FILES_TO_MODIFY.get(fileName));
       } catch (ParseException e) {
         e.printStackTrace();
       }
@@ -398,6 +414,20 @@ public class ReactAndroidCodeTransformer {
       } else {
         out.write(cu.toString().getBytes());
       }
+    }
+  }
+
+  private static void updateKotlinFile(final String path, final KtMethodVisitor methodVisitor) throws IOException, ParseException {
+    FileInputStream in = new FileInputStream(path);
+    String content = new String(in.readAllBytes());
+    in.close();
+
+    try (FileOutputStream out = new FileOutputStream(path)) {
+        if (methodVisitor != null) {
+            out.write(methodVisitor.modifySource(content).getBytes());
+        } else {
+            out.write(content.getBytes());
+        }
     }
   }
 
