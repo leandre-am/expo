@@ -58,7 +58,7 @@ module.exports = {
             : process.env.E2E_ROUTER_ASYNC === 'false'
               ? false
               : process.env.E2E_ROUTER_ASYNC || false,
-        root: path.join('__e2e__', process.env.E2E_ROUTER_SRC ?? 'headless', 'app'),
+        root: path.join('__e2e__', process.env.E2E_ROUTER_SRC ?? 'static-rendering', 'app'),
         origin: 'https://smart-symbiote.netlify.app/',
       },
     ],
