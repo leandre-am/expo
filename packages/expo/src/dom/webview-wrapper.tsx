@@ -2,7 +2,7 @@
 import React from 'react';
 import { WebView } from 'react-native-webview';
 
-import type { BridgeMessage, DOMProps, WebViewProps } from './dom.types';
+import type { BridgeMessage, DOMProps, WebViewProps, WebViewRef } from './dom.types';
 import {
   getInjectBodySizeObserverScript,
   getInjectEventScript,
@@ -12,32 +12,31 @@ import {
   NATIVE_ACTION_RESULT,
 } from './injection';
 
-function mergeRefs(...props) {
-  return function forwardRef(node) {
-    props.forEach((ref) => {
-      if (ref == null) {
-        return;
-      }
-
-      if (typeof ref === 'function') {
-        ref(node);
-      } else if (typeof ref === 'object') {
-        ref.current = node;
-      }
-    });
-  };
-}
-
 interface Props {
   dom: DOMProps;
   source: WebViewProps['source'];
 }
 
 const RawWebView = React.forwardRef<object, Props>(({ dom, source, ...marshalProps }, ref) => {
-  const webviewRef = React.useRef<WebView>(null);
-  const [containerStyle, setContainerStyle] = React.useState<WebViewProps['containerStyle']>(null);
+  if (ref != null && typeof ref == 'object' && ref.current == null) {
+    ref.current = new Proxy(
+      {},
+      {
+        get(target, prop) {
+          const propName = String(prop);
+          return function (...args) {
+            const serializedArgs = args.map((arg) => JSON.stringify(arg)).join(',');
+            webviewRef.current?.injectJavaScript(
+              `window._domRefProxy.${propName}(${serializedArgs})`
+            );
+          };
+        },
+      }
+    );
+  }
 
-  const setRef = React.useMemo(() => mergeRefs(webviewRef, {}, ref), [webviewRef, ref]);
+  const webviewRef = React.useRef<WebViewRef>(null);
+  const [containerStyle, setContainerStyle] = React.useState<WebViewProps['containerStyle']>(null);
 
   const emit = React.useCallback(
     (detail: BridgeMessage<any>) => {
@@ -91,7 +90,7 @@ const RawWebView = React.forwardRef<object, Props>(({ dom, source, ...marshalPro
       ]
         .filter(Boolean)
         .join('\n')}
-      ref={setRef}
+      ref={webviewRef}
       source={source}
       style={[
         dom?.style
